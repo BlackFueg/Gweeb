@@ -1,0 +1,18 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files
+*.py text diff=python
+
+# Shell scripts
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# Documentation
+*.md text diff=markdown
+LICENSE text
+
+# Binary files
+*.ico binary
+*.icns binary
+*.png binary 
