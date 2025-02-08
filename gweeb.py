@@ -22,6 +22,17 @@ import time
 # Global flag for cleanup
 _cleanup_done = False
 IS_WINDOWS = platform.system() == "Windows"
+IS_LINUX = platform.system() == "Linux"
+
+# For Linux desktop notifications
+if IS_LINUX:
+    try:
+        import dbus
+        from dbus.mainloop.glib import DBusGMainLoop
+        HAVE_DBUS = True
+    except ImportError:
+        HAVE_DBUS = False
+        print("Warning: dbus-python not installed, falling back to Qt notifications")
 
 def get_local_ip():
     """Get the local IP address that can be used for LAN communication"""
@@ -138,6 +149,33 @@ atexit.register(cleanup)
 if not IS_WINDOWS:
     signal.signal(signal.SIGTERM, lambda signo, frame: cleanup())
     signal.signal(signal.SIGINT, lambda signo, frame: cleanup())
+
+def show_linux_notification(title, message, timeout=2000):
+    """Show a notification using Linux's notification system"""
+    if not IS_LINUX or not HAVE_DBUS:
+        return False
+        
+    try:
+        DBusGMainLoop(set_as_default=True)
+        bus = dbus.SessionBus()
+        notify = dbus.Interface(
+            bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications'),
+            'org.freedesktop.Notifications'
+        )
+        notify.Notify(
+            'Gweeb',  # App name
+            0,        # Replace ID
+            '',      # Icon (empty for default)
+            title,
+            message,
+            [],      # Actions
+            {},      # Hints
+            timeout  # Timeout in ms
+        )
+        return True
+    except Exception as e:
+        print(f"Failed to show Linux notification: {e}")
+        return False
 
 def create_icon():
     # Create a simple clipboard icon
@@ -503,8 +541,13 @@ class Gweeb(QObject):
         self.pid = os.getpid()
         
         # Write PID to file for cleanup
-        pid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gweeb.pid')
-        with open(pid_file, 'w') as f:
+        if IS_LINUX:
+            pid_dir = os.path.expanduser("~/.local/share/gweeb")
+        else:
+            pid_dir = os.path.dirname(os.path.abspath(__file__))
+        os.makedirs(pid_dir, exist_ok=True)
+        self.pid_file = os.path.join(pid_dir, 'gweeb.pid')
+        with open(self.pid_file, 'w') as f:
             f.write(str(self.pid))
         
         # Create system tray icon
@@ -514,17 +557,18 @@ class Gweeb(QObject):
         # Set icon
         self.tray.setIcon(create_icon())
         
-        # Ensure notifications are enabled
-        if not self.tray.supportsMessages():
-            print("Warning: System tray notifications not supported")
-        
         # Create tray menu
         self.menu = QMenu()
         self.setup_menu()
         self.tray.setContextMenu(self.menu)
         
         # Connect the tray icon's activated signal
-        self.tray.activated.connect(self.show_menu)
+        if IS_LINUX:
+            # On Linux, show menu for any click
+            self.tray.activated.connect(lambda reason: self.menu.popup(QCursor.pos()))
+        else:
+            # On other platforms, use default behavior
+            self.tray.activated.connect(self.show_menu)
         
         # Start network listener first to get the interface
         self.listener = NetworkListener()
@@ -539,6 +583,9 @@ class Gweeb(QObject):
         
         # Show the tray icon
         if not self.tray.isSystemTrayAvailable():
+            if IS_LINUX:
+                print("Warning: System tray not available. Please ensure you have a system tray installed.")
+                print("For Gnome, you might need the 'KStatusNotifierItem/AppIndicator Support' extension.")
             QMessageBox.warning(None, "System Tray",
                               "System tray is not available on this system!")
         self.tray.show()
@@ -788,13 +835,16 @@ class Gweeb(QObject):
             
             # Show notification
             try:
-                # Keep notification brief and unobtrusive
-                self.tray.showMessage(
-                    "Gweeb",  # Title
-                    notification_text,  # Message
-                    QSystemTrayIcon.Information,  # Icon
-                    2000  # Duration in ms (2 seconds)
-                )
+                if IS_LINUX and show_linux_notification("Gweeb", notification_text):
+                    pass  # Linux notification shown successfully
+                else:
+                    # Fallback to Qt notifications
+                    self.tray.showMessage(
+                        "Gweeb",  # Title
+                        notification_text,  # Message
+                        QSystemTrayIcon.Information,  # Icon
+                        2000  # Duration in ms (2 seconds)
+                    )
             except Exception as e:
                 print(f"Failed to show notification: {e}")
         else:
@@ -851,8 +901,8 @@ class Gweeb(QObject):
         
         # Remove PID file
         try:
-            pid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gweeb.pid')
-            os.remove(pid_file)
+            if os.path.exists(self.pid_file):
+                os.remove(self.pid_file)
         except:
             pass
             
@@ -889,8 +939,27 @@ if __name__ == '__main__':
             os.system(f"{sys.executable} -m pip install netifaces")
             import netifaces
     
+    # Install dbus-python on Linux if not present
+    if IS_LINUX:
+        try:
+            import dbus
+        except ImportError:
+            print("Installing required dependency: dbus-python")
+            os.system(f"{sys.executable} -m pip install dbus-python")
+            try:
+                import dbus
+                HAVE_DBUS = True
+            except ImportError:
+                HAVE_DBUS = False
+                print("Warning: Failed to install dbus-python, falling back to Qt notifications")
+    
     # Check if another instance is running
-    pid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gweeb.pid')
+    if IS_LINUX:
+        pid_dir = os.path.expanduser("~/.local/share/gweeb")
+        pid_file = os.path.join(pid_dir, 'gweeb.pid')
+    else:
+        pid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gweeb.pid')
+        
     if os.path.exists(pid_file):
         try:
             with open(pid_file, 'r') as f:

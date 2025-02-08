@@ -32,6 +32,32 @@ A lightweight LAN clipboard sharing utility that lives in your system tray.
    install.bat
    ```
 
+### Linux (BETA)
+> ⚠️ **Note**: Linux support is currently in BETA and may have issues. Please report any problems you encounter.
+
+1. Download the repository
+2. Run the installer:
+   ```bash
+   ./install_linux.sh
+   ```
+   This will:
+   - Install required system packages and Python dependencies
+   - Set up Gweeb in your user directory
+   - Add a desktop entry and command-line launcher
+
+#### Linux Requirements
+- Ubuntu 22.04 or similar (other distributions may work but are untested)
+- Python 3.8 or higher
+- System tray support:
+  - For GNOME: Install "KStatusNotifierItem/AppIndicator Support" extension
+  - For KDE: Should work out of the box
+- D-Bus for native notifications (optional)
+
+#### Known Linux Issues
+- System tray icon may not appear in some desktop environments
+- Notifications might fall back to Qt-based popups if D-Bus is not available
+- Some window managers may need additional configuration for proper tray support
+
 ## Usage
 1. Launch Gweeb:
    - macOS: Type `gweeb` in terminal or run `~/Applications/Gweeb/launch_gweeb.sh`
@@ -68,20 +94,34 @@ Gweeb works in two modes:
    - May not work across different subnets
 
 ## Troubleshooting
+
+### Windows
 1. **Devices not discovering each other**:
    - Ensure all machines are on the same network
-   - Check firewall settings for Python/Gweeb
+   - Check Windows Firewall settings for Python/Gweeb
    - If using ZeroTier, verify all machines show "OK" status
 
-2. **Text not sending**:
-   - Check if auto-send is enabled in the tray menu
-   - Verify network connectivity between machines
-   - Look for any firewall blocking messages
+### macOS
+1. **Installation issues**:
+   - Ensure Homebrew is installed
+   - Check system requirements are met
+   - Make sure you have write permissions to ~/Applications
+
+### Linux (BETA)
+1. **System tray icon not showing**:
+   - GNOME users: Install "KStatusNotifierItem/AppIndicator Support" extension
+   - Verify your desktop environment supports system tray icons
+   - Try restarting your session
+
+2. **Notifications not working**:
+   - Install `python3-dbus` package: `sudo apt install python3-dbus`
+   - Check if D-Bus is running: `systemctl --user status dbus`
+   - App will fall back to Qt notifications if D-Bus is unavailable
 
 3. **Installation issues**:
-   - Windows: Run installer without admin privileges
-   - macOS: Ensure Homebrew is installed
-   - Check system requirements are met
+   - Run `sudo apt install python3-venv python3-pip` if not already installed
+   - Check if Qt dependencies are installed
+   - Ensure ~/.local/bin is in your PATH
 
 ## Development
 To set up a development environment:
