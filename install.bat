@@ -22,6 +22,14 @@ exit /b
 echo %RED%Error:%NC% %~1
 exit /b
 
+:: Function to handle errors
+:handle_error
+call :print_error %~1
+echo.
+echo Press any key to exit...
+pause >nul
+exit /b 1
+
 :: Check if running with admin privileges
 net session >nul 2>&1
 if %errorLevel% == 0 (
@@ -37,10 +45,17 @@ reg query "HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" /v Version
 if %errorLevel% NEQ 0 (
     call :print_status "Installing Visual C++ Redistributable..."
     :: Download VC++ Redistributable
-    curl -L -o vc_redist.exe https://aka.ms/vs/17/release/vc_redist.x64.exe
+    curl -L -o vc_redist.exe https://aka.ms/vs/17/release/vc_redist.x64.exe || (
+        call :handle_error "Failed to download Visual C++ Redistributable"
+        exit /b 1
+    )
     
     :: Install VC++ Redistributable
     start /wait vc_redist.exe /quiet /norestart
+    if %errorLevel% NEQ 0 (
+        call :handle_error "Failed to install Visual C++ Redistributable"
+        exit /b 1
+    )
     
     :: Clean up
     del vc_redist.exe
@@ -52,10 +67,17 @@ if %errorLevel% NEQ 0 (
     call :print_status "Python not found. Installing Python..."
     
     :: Download Python installer
-    curl -o python_installer.exe https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe
+    curl -o python_installer.exe https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe || (
+        call :handle_error "Failed to download Python installer"
+        exit /b 1
+    )
     
     :: Install Python
     start /wait python_installer.exe /quiet InstallAllUsers=0 PrependPath=1
+    if %errorLevel% NEQ 0 (
+        call :handle_error "Failed to install Python"
+        exit /b 1
+    )
     
     :: Clean up
     del python_installer.exe
@@ -65,29 +87,60 @@ if %errorLevel% NEQ 0 (
     setx PATH "%PATH%" >nul 2>&1
 )
 
+:: Verify Python installation
+python --version >nul 2>&1
+if %errorLevel% NEQ 0 (
+    call :handle_error "Python installation failed. Please try installing Python 3.11 manually."
+    exit /b 1
+)
+
 :: Create application directory
 set "APP_DIR=%LOCALAPPDATA%\Gweeb"
 if not exist "%APP_DIR%" (
     call :print_status "Creating application directory..."
-    mkdir "%APP_DIR%"
+    mkdir "%APP_DIR%" || (
+        call :handle_error "Failed to create application directory"
+        exit /b 1
+    )
 )
 
 :: Copy files to application directory
 call :print_status "Installing Gweeb..."
-xcopy /E /I /Y "." "%APP_DIR%"
+xcopy /E /I /Y "." "%APP_DIR%" || (
+    call :handle_error "Failed to copy files to application directory"
+    exit /b 1
+)
 
 :: Create virtual environment
-cd "%APP_DIR%"
+cd "%APP_DIR%" || (
+    call :handle_error "Failed to change to application directory"
+    exit /b 1
+)
+
 if not exist "venv" (
     call :print_status "Creating virtual environment..."
-    python -m venv venv
+    python -m venv venv || (
+        call :handle_error "Failed to create virtual environment"
+        exit /b 1
+    )
 )
 
 :: Activate virtual environment and install requirements
 call :print_status "Installing dependencies..."
-call venv\Scripts\activate.bat
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+call venv\Scripts\activate.bat || (
+    call :handle_error "Failed to activate virtual environment"
+    exit /b 1
+)
+
+python -m pip install --upgrade pip || (
+    call :handle_error "Failed to upgrade pip"
+    exit /b 1
+)
+
+python -m pip install -r requirements.txt || (
+    call :handle_error "Failed to install requirements"
+    exit /b 1
+)
 
 :: Create start menu shortcut
 call :print_status "Creating start menu shortcut..."
@@ -103,7 +156,10 @@ echo oLink.WorkingDirectory = "%APP_DIR%" >> "%VBS_SCRIPT%"
 echo oLink.Description = "Gweeb Clipboard Sharing Utility" >> "%VBS_SCRIPT%"
 echo oLink.Save >> "%VBS_SCRIPT%"
 
-cscript //nologo "%VBS_SCRIPT%"
+cscript //nologo "%VBS_SCRIPT%" || (
+    call :handle_error "Failed to create start menu shortcut"
+    exit /b 1
+)
 del "%VBS_SCRIPT%"
 
 call :print_status "Installation complete!"
@@ -116,4 +172,7 @@ if /i "%LAUNCH%"=="y" (
     start "" "%SHORTCUT%"
 )
 
+echo.
+echo Press any key to exit...
+pause >nul
 endlocal 

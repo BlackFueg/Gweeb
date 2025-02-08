@@ -27,11 +27,18 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-if (( $(echo "$PYTHON_VERSION < 3.8" | bc -l) )); then
+# Get Python version
+PYTHON_VERSION=$(python3 -c 'import sys; v=sys.version_info; print(f"{v.major}.{v.minor}")')
+MAJOR_VERSION=$(echo $PYTHON_VERSION | cut -d. -f1)
+MINOR_VERSION=$(echo $PYTHON_VERSION | cut -d. -f2)
+
+# Check version is at least 3.8
+if [ "$MAJOR_VERSION" -lt 3 ] || ([ "$MAJOR_VERSION" -eq 3 ] && [ "$MINOR_VERSION" -lt 8 ]); then
     echo "Python 3.8 or higher is required. Found version $PYTHON_VERSION"
     exit 1
 fi
+
+echo "Found Python $PYTHON_VERSION"
 
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
