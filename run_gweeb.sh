@@ -60,7 +60,7 @@ if [ ! -f "requirements.txt" ]; then
     cat > requirements.txt << EOF
 PySide6==6.8.2
 zeroconf==0.131.0
-cryptography==44.0.0
+cryptography==43.0.1
 psutil==5.9.8
 EOF
 fi
