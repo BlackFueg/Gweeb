@@ -12,6 +12,43 @@ A lightweight LAN clipboard sharing utility that lives in your system tray.
 - Secure communication over ZeroTier virtual networks (recommended)
 - Also works on regular LANs
 
+## Potential Uses
+
+### Development & Debugging
+- Share console logs between development and testing machines
+- Quickly transfer error messages from headless servers to development machines
+- Copy-paste build commands across multiple development environments
+- Share Git commands or commit hashes between machines
+
+### DevOps & System Administration
+- Distribute configuration snippets across multiple servers
+- Share terminal commands for simultaneous system updates
+- Copy long SSH keys or authentication tokens between machines
+- Transfer log entries or system outputs for troubleshooting
+
+### Cross-Platform Development
+- Share test data between different platform builds
+- Copy platform-specific commands between development environments
+- Transfer build outputs between compilation environments
+
+### Content Creation & Design
+- Share color codes between design tools
+- Transfer CSS/HTML snippets between mockup and development machines
+- Copy metadata or file paths between editing stations
+- Share script snippets between recording/streaming setups
+
+### Security & Network Testing
+- Share network scan results between analysis machines
+- Transfer configuration snippets between test environments
+- Copy long encryption keys or certificates between systems
+- Share packet capture data between analysis tools
+
+### General Productivity
+- Copy-paste meeting notes between work and personal devices
+- Share URLs between machines without email/messaging
+- Transfer configuration settings across workstations
+- Quick sharing of temporary credentials in secure environments
+
 ## Installation
 
 ### macOS
